@@ -13,6 +13,7 @@ app.use(async (ctx, next) => {
 app.use(async (ctx, next) => {
     responseData.age = 16;
     console.log("b");
+    throw new Error("error...");
     await next();
 });
 
@@ -23,4 +24,7 @@ app.use(async ctx => {
 
 app.listen(3000, () => {
     console.log("listening on 3000");
+});
+app.on("error", err => {
+    console.log("demo::", err.stack);
 });

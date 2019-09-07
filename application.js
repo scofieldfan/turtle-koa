@@ -2,12 +2,14 @@ let http = require("http");
 let context = require("./context");
 let request = require("./request");
 let response = require("./response");
+let EventEmitter = require("events");
 
-class Application {
+class Application extends EventEmitter {
     /**
      * 构造函数
      */
     constructor() {
+        super();
         this.middlewares = [];
         this.context = context;
         this.request = request;
@@ -60,8 +62,11 @@ class Application {
         return (req, res) => {
             let ctx = this.createContext(req, res);
             let respond = () => this.responseBody(ctx);
+            let onerror = err => this.onerror(err, ctx);
             let fn = this.compose();
-            return fn(ctx).then(respond);
+            return fn(ctx)
+                .then(respond)
+                .catch(onerror);
         };
     }
     createContext(req, res) {
@@ -74,6 +79,17 @@ class Application {
         return ctx;
     }
 
+    onerror(err, ctx) {
+        if (err.code === "ENOENT") {
+            ctx.status = 404;
+        } else {
+            ctx.status = 500;
+        }
+        let msg = err.message || "Internal error";
+        ctx.res.end(msg);
+        // 触发error事件
+        this.emit("error", err);
+    }
     responseBody(ctx) {
         let content = ctx.body;
         if (typeof content === "string") {
